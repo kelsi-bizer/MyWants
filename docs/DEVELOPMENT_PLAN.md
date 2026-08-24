@@ -240,6 +240,16 @@ Sized at ~7x baseline: each day below is roughly a conventional week. **Deploy e
 - **Provenance callbacks wired now**, before any downstream code exists.
 - **Exit criteria:** three live Cloud Run URLs; `observations` populated from 10+ real sources including a live API; one `gemini-3.7-flash` call visible in Cloud Trace.
 
+#### Project coordinates (established Day 0)
+
+| | |
+| --- | --- |
+| Project ID | `mywants-ai-hack26` |
+| Project name | MyWants AI |
+| Billing account | `0116DC-D0BCA8-06FD36` (HeyKels Billing) |
+| Region | `us-central1` — Firestore location is **not editable after creation**; changing it later means recreating the database |
+| Repo path in Cloud Shell | `~/mywants` |
+
 #### Development environment: Google Cloud Shell
 
 All build work happens in **Google Cloud Shell**. This is a good choice — `gcloud`, `bq`, `gsutil`, `terraform`, `docker`, `python3`, `node`, and `git` are all pre-installed and pre-authenticated, so Task 0.1 shrinks considerably. Three properties shape how we work:
