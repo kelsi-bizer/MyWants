@@ -240,6 +240,38 @@ Sized at ~7x baseline: each day below is roughly a conventional week. **Deploy e
 - **Provenance callbacks wired now**, before any downstream code exists.
 - **Exit criteria:** three live Cloud Run URLs; `observations` populated from 10+ real sources including a live API; one `gemini-3.7-flash` call visible in Cloud Trace.
 
+#### Development environment: Google Cloud Shell
+
+All build work happens in **Google Cloud Shell**. This is a good choice — `gcloud`, `bq`, `gsutil`, `terraform`, `docker`, `python3`, `node`, and `git` are all pre-installed and pre-authenticated, so Task 0.1 shrinks considerably. Three properties shape how we work:
+
+| Property | Consequence |
+| --- | --- |
+| `$HOME` persists (5 GB); **everything outside it is wiped** when the VM recycles | Keep the repo, venv, and `node_modules` under `~/mywants`. Never `apt install` to a system path and expect it to survive — pin tool installs into `$HOME` or a re-runnable `scripts/setup.sh`. |
+| VM recycles after ~20 min idle / 12 h max session | **Never run long builds in the terminal.** Use Cloud Build (server-side) and Cloud Run jobs, which survive disconnects. This is what we were doing anyway. |
+| ~50 hours/week usage quota | A real risk across 8 days of high-velocity work. If the quota binds mid-week, fall back to local `gcloud` or a Compute Engine VM. Worth watching from Day 2 on. |
+
+Practical rules: the repo lives at `~/mywants`; `scripts/setup.sh` restores tooling after a VM recycle; every container build goes through Cloud Build rather than local `docker build`.
+
+#### Day 0 task sequence (dependency-ordered, executed one at a time)
+
+Deploy path is de-risked early (0.6) rather than left to the end of the day — a broken deploy discovered at hour 10 costs the whole day.
+
+| # | Task | Blocks | Owner |
+| --- | --- | --- | --- |
+| 0.1 | **GCP project + billing enabled** | everything | human — needs Google account + billing |
+| 0.2 | Enable required APIs; set `gcloud` defaults | 0.5+ | human/CLI |
+| 0.3 | **Pin the platform surface** — verify real `google-genai` / ADK symbol names post-rebrand → `docs/platform-notes.md` | all agent code | pair |
+| 0.4 | Monorepo scaffold + `services/agents/models.py` (compliance file) | all code | Claude |
+| 0.5 | Terraform: state bucket, Firestore, BigQuery, GCS, Pub/Sub + DLQs, Cloud Tasks, Scheduler, Secret Manager, service accounts + least-privilege IAM | 0.6+ | Claude |
+| 0.6 | **Hello-world deploys**: Next.js + FastAPI + ADK agent server on Cloud Run, Cloud Build CI/CD on push | de-risks everything after | Claude |
+| 0.7 | `packages/schemas`: Pydantic + Zod contracts from one source of truth | 0.8+ | Claude |
+| 0.8 | Provenance callback framework (wired before any consumer exists) | all pipeline stages | Claude |
+| 0.9 | Data Source Registry schema + 25+ sources across all seven categories | 0.10 | Claude |
+| 0.10 | Connector framework: BigQuery public-dataset + HTTP connectors — **verify real dataset/table IDs against the live catalog** | 0.11 | Claude |
+| 0.11 | `IngestAgent` + `NormalizeAgent` + ingest Cloud Run job + `maximum_bytes_billed` cost guards | Day 1 | Claude |
+| 0.12 | Firebase Auth + admin/contributor custom claims | Day 2 console | Claude |
+| 0.13 | Verify Day 0 exit criteria end to end | Day 1 start | pair |
+
 ### Day 1 — Aug 24: Signals, clustering, fusion, backtesting
 - `ChangeDetectionAgent`: full BigQuery SQL suite — YoY, CAGR, z-score, rank shift, breakpoint — across all registered indicators → `signals`.
 - Want capture UI + API; seed 200+ realistic Wants (`scripts/seed`) shaped so genuine clusters emerge.
