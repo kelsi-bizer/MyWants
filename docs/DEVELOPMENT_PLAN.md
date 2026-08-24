@@ -250,6 +250,25 @@ Sized at ~7x baseline: each day below is roughly a conventional week. **Deploy e
 | Region | `us-central1` — Firestore location is **not editable after creation**; changing it later means recreating the database |
 | Repo path in Cloud Shell | `~/mywants` |
 
+#### Verified platform facts (task 0.2/0.3 — measured, not assumed)
+
+| Fact | Status |
+| --- | --- |
+| `gemini-3.7-flash` on **`global`** endpoint | ✅ **Works** — returned `"modelVersion": "gemini-3.7-flash"` |
+| `gemini-3.7-flash` on `us-central1` | ❌ **404 NOT_FOUND** — not available in-region |
+| Publisher-model listing via `v1beta1/publishers/google/models` | Returns empty; does not enumerate. Probe with a real call instead. |
+| `gemini-3.7-flash` is a **thinking model** | ⚠️ 87 thought tokens for an 8-token prompt |
+
+**Architectural consequence — split locations.** Gemini calls use `location = global`; Firestore, Cloud Run, BigQuery, Pub/Sub, and Cloud Tasks all stay in `us-central1`. This is normal and costs nothing, but it must be right in config from the start:
+
+```
+https://aiplatform.googleapis.com/v1/projects/{PROJECT}/locations/global/publishers/google/models/{MODEL}:generateContent
+```
+
+Note the global endpoint has **no region prefix** on the host — it is `aiplatform.googleapis.com`, not `global-aiplatform.googleapis.com`. `models.py` must carry `GEMINI_LOCATION = "global"` as a separate constant from `REGION`, and ADK/`google-genai` clients must be initialized with it explicitly rather than inheriting `CLOUDSDK_RUN_REGION`.
+
+**Thinking-token consequence.** Reserve `gemini-3.7-flash` for genuine reasoning (opportunity generation, entity planning, international transfer, governance). Per-record work — normalization, classification, tagging — goes to `gemini-3.5-flash-lite` with an explicit low thinking budget. At Day 1 volumes (25+ indicators × many periods) the difference between the two is the difference between a manageable bill and a surprising one.
+
 #### Development environment: Google Cloud Shell
 
 All build work happens in **Google Cloud Shell**. This is a good choice — `gcloud`, `bq`, `gsutil`, `terraform`, `docker`, `python3`, `node`, and `git` are all pre-installed and pre-authenticated, so Task 0.1 shrinks considerably. Three properties shape how we work:
