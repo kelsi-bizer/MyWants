@@ -1,0 +1,28 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Node
+node_modules/
+.next/
+out/
+
+# Terraform — state can contain secrets and must never be committed
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+.terraform.lock.hcl
+
+# Local env and credentials
+.env
+.env.local
+*-credentials.json
+service-account*.json
+
+# OS / editor
+.DS_Store
+*.swp
