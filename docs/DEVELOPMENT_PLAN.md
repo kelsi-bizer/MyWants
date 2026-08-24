@@ -262,6 +262,20 @@ All build work happens in **Google Cloud Shell**. This is a good choice — `gcl
 
 Practical rules: the repo lives at `~/mywants`; `scripts/setup.sh` restores tooling after a VM recycle; every container build goes through Cloud Build rather than local `docker build`.
 
+**Gotcha hit on Day 0, task 0.2 — `gcloud config` does not survive a session reset.** Cloud Shell generates a fresh ephemeral config (`cloudshell-NNNNN`) each session, so `gcloud config set project` is lost on every recycle, taking exported shell variables with it. Symptom: `ERROR: The required property [project] is not currently set`, and the shell prompt drops its `(project-id)` suffix.
+
+Fix — put the settings in `~/.bashrc`, which lives in the persistent `$HOME`:
+
+```bash
+export PROJECT_ID=mywants-ai-hack26
+export REGION=us-central1
+export CLOUDSDK_CORE_PROJECT=$PROJECT_ID     # env var overrides gcloud config
+export CLOUDSDK_RUN_REGION=$REGION
+export GOOGLE_CLOUD_PROJECT=$PROJECT_ID      # what client libraries read
+```
+
+Anything that must survive a recycle belongs in `~/.bashrc` or `scripts/setup.sh` — never in `gcloud config` or a bare `export` alone.
+
 #### Day 0 task sequence (dependency-ordered, executed one at a time)
 
 Deploy path is de-risked early (0.6) rather than left to the end of the day — a broken deploy discovered at hour 10 costs the whole day.
