@@ -14,6 +14,10 @@ REGION="us-central1"
 REPO_DIR="${HOME}/mywants"
 MARKER="# --- MyWants AI ---"
 
+# Pinned to the version the config was validated against.
+TERRAFORM_VERSION="1.13.1"
+BIN_DIR="${HOME}/bin"
+
 echo "==> Persisting project settings to ~/.bashrc"
 if ! grep -qF "${MARKER}" "${HOME}/.bashrc" 2>/dev/null; then
   cat >> "${HOME}/.bashrc" <<EOF
@@ -27,11 +31,17 @@ export CLOUDSDK_RUN_REGION=\$REGION
 export GOOGLE_CLOUD_PROJECT=\$PROJECT_ID
 export GOOGLE_GENAI_USE_ENTERPRISE=true
 export GOOGLE_GENAI_USE_VERTEXAI=true
+export PATH="\${HOME}/bin:\${PATH}"
 EOF
   echo "    added"
 else
   echo "    already present"
 fi
+
+# Ensure ~/bin is on PATH even if the block above was added before this line
+# existed, and for the remainder of this script.
+export PATH="${BIN_DIR}:${PATH}"
+grep -q 'HOME}/bin:' "${HOME}/.bashrc" || echo 'export PATH="${HOME}/bin:${PATH}"' >> "${HOME}/.bashrc"
 
 # shellcheck disable=SC1091
 source "${HOME}/.bashrc"
@@ -39,6 +49,22 @@ source "${HOME}/.bashrc"
 echo "==> Setting gcloud defaults for this session"
 gcloud config set project "${PROJECT_ID}" --quiet
 gcloud config set run/region "${REGION}" --quiet
+
+echo "==> Terraform"
+# Cloud Shell does NOT ship terraform, and `apt install` writes to /usr/bin,
+# which is wiped on every VM recycle. Install into $HOME so it survives.
+mkdir -p "${BIN_DIR}"
+if [ -x "${BIN_DIR}/terraform" ] && "${BIN_DIR}/terraform" version | grep -q "v${TERRAFORM_VERSION}"; then
+  echo "    v${TERRAFORM_VERSION} already installed"
+else
+  TMP="$(mktemp -d)"
+  curl -fsSL -o "${TMP}/tf.zip" \
+    "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip"
+  unzip -oq "${TMP}/tf.zip" -d "${BIN_DIR}"
+  chmod +x "${BIN_DIR}/terraform"
+  rm -rf "${TMP}"
+  echo "    installed v${TERRAFORM_VERSION} to ${BIN_DIR}"
+fi
 
 echo "==> Python virtualenv"
 cd "${REPO_DIR}"
